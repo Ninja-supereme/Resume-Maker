@@ -1,7 +1,6 @@
 const { GoogleGenAI } = require("@google/genai")
 const { z } = require("zod")
 const { zodToJsonSchema } = require("zod-to-json-schema")
-const puppeteer = require("puppeteer")
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY })
 const MODEL = "gemini-3-flash-preview"
@@ -60,24 +59,7 @@ ${candidateDetails(details)}`
     return report
 }
 
-async function generatePdfFromHtml(html) {
-    const browser = await puppeteer.launch()
-
-    try {
-        const page = await browser.newPage()
-        await page.setJavaScriptEnabled(false)
-        await page.setContent(html, { waitUntil: "load" })
-
-        return await page.pdf({
-            format: "A4",
-            margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" }
-        })
-    } finally {
-        await browser.close()
-    }
-}
-
-async function generateResumePdf(details) {
+async function generateResumeHtml(details) {
     const prompt = `Generate a resume for a candidate with the following details:
 ${candidateDetails(details)}
 
@@ -86,10 +68,10 @@ Return a JSON object with a single field "html" containing a complete HTML docum
 - It should read like a real human-written resume, not AI-generated text.
 - Keep the design simple and professional; a little color or font styling is fine. Use inline CSS only, no scripts or external resources.
 - It must be ATS friendly.
-- It should be 1-2 pages long when printed. Focus on quality over quantity.`
+- It will be printed to an A4 PDF from a browser, so it should fit on 1-2 pages. Focus on quality over quantity.`
 
     const { html } = await generateJson(prompt, resumeSchema)
-    return generatePdfFromHtml(html)
+    return html
 }
 
-module.exports = { generateInterviewReport, generateResumePdf }
+module.exports = { generateInterviewReport, generateResumeHtml }

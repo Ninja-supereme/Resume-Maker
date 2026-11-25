@@ -1,6 +1,6 @@
 const mongoose = require("mongoose")
 const { PDFParse } = require("pdf-parse")
-const { generateInterviewReport, generateResumePdf } = require("../services/ai.service")
+const { generateInterviewReport, generateResumeHtml } = require("../services/ai.service")
 const interviewReportModel = require("../models/interviewReport.model")
 
 async function extractPdfText(buffer) {
@@ -66,7 +66,7 @@ async function getAllInterviewReportsController(req, res) {
     res.status(200).json({ interviewReports })
 }
 
-async function generateResumePdfController(req, res) {
+async function generateResumeController(req, res) {
     const interviewReport = await findUserReport(req)
 
     if (!interviewReport) {
@@ -74,18 +74,14 @@ async function generateResumePdfController(req, res) {
     }
 
     const { resume, jobDescription, selfDescription } = interviewReport
-    const pdfBuffer = await generateResumePdf({ resume, jobDescription, selfDescription })
+    const html = await generateResumeHtml({ resume, jobDescription, selfDescription })
 
-    res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=resume_${interviewReport._id}.pdf`
-    })
-    res.send(Buffer.from(pdfBuffer))
+    res.status(200).json({ html })
 }
 
 module.exports = {
     generateInterviewReportController,
     getInterviewReportByIdController,
     getAllInterviewReportsController,
-    generateResumePdfController
+    generateResumeController
 }

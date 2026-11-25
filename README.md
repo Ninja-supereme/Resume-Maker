@@ -7,7 +7,7 @@ An AI-powered interview preparation app. Paste a job description, upload your re
 - **Behavioral questions** – same format, for soft-skill rounds
 - **Skill gaps** – missing skills tagged by severity (low / medium / high)
 - **Preparation roadmap** – a day-by-day study plan
-- **Tailored resume PDF** – a one-click, ATS-friendly resume rewritten for the job
+- **Tailored resume PDF** – an ATS-friendly resume rewritten for the job, saved as PDF from the browser
 
 ## Tech Stack
 
@@ -16,7 +16,7 @@ An AI-powered interview preparation app. Paste a job description, upload your re
 | Frontend | React 19, React Router 7, Axios, Sass, Vite |
 | Backend  | Node.js, Express 5, Mongoose (MongoDB), JWT, bcrypt |
 | AI       | Google Gemini (`@google/genai`) with Zod-validated structured output |
-| Files    | Multer (uploads), pdf-parse (resume text), Puppeteer (HTML → PDF) |
+| Files    | Multer (uploads), pdf-parse (resume text), browser print-to-PDF (tailored resume) |
 
 ## Architecture
 
@@ -37,7 +37,6 @@ flowchart LR
     Interview -- "PDF upload" --> Parse[pdf-parse]
     Interview --> AI
     AI -- "prompt + JSON schema" --> Gemini[(Google Gemini)]
-    AI -- "resume HTML" --> Puppeteer[Puppeteer]
     Auth --> DB[(MongoDB)]
     Interview --> DB
 ```
@@ -63,7 +62,7 @@ sequenceDiagram
     F->>U: Redirect to /interview/:id
 ```
 
-The resume PDF follows the same pattern: the backend loads the stored report, asks Gemini for a tailored HTML resume, renders it to an A4 PDF with Puppeteer (JavaScript disabled), and streams it back as a download.
+The tailored resume follows the same pattern: the backend loads the stored report, asks Gemini for a tailored HTML resume, and returns the HTML. The frontend loads it into a hidden, sandboxed iframe (scripts disabled) and opens the browser's print dialog, where the user picks **Save as PDF**. This produces a real text PDF (ATS-readable) without running a headless browser on the server.
 
 ### Authentication
 
@@ -86,14 +85,14 @@ interview-ai-yt/
 │       │   └── interview.routes.js
 │       ├── controllers/
 │       │   ├── auth.controller.js      # register, login, logout, get-me
-│       │   └── interview.controller.js # create/list/get reports, resume PDF
+│       │   └── interview.controller.js # create/list/get reports, tailored resume
 │       ├── middlewares/
 │       │   ├── auth.middleware.js      # JWT cookie verification
 │       │   └── file.middleware.js      # Multer: PDF only, max 5MB
 │       ├── models/
 │       │   ├── user.model.js
 │       │   └── interviewReport.model.js
-│       └── services/ai.service.js      # Gemini prompts, Zod schemas, Puppeteer
+│       └── services/ai.service.js      # Gemini prompts, Zod schemas
 └── Frontend/
     └── src/
         ├── main.jsx / App.jsx          # Entry point, AuthProvider, router
@@ -153,8 +152,6 @@ Start the server:
 npm run dev
 ```
 
-> Puppeteer downloads Chromium during `npm install`. If resume generation fails with a "browser not found" error, run `npx puppeteer browsers install chrome`.
-
 ### 3. Frontend
 
 ```bash
@@ -203,7 +200,7 @@ All routes require the auth cookie.
 | GET | `/` | – | List your reports (`title`, `matchScore`, `createdAt`) |
 | POST | `/` | multipart: `jobDescription` (required), `resume` (PDF) and/or `selfDescription` | Generate and save a new report |
 | GET | `/report/:interviewId` | – | Full report |
-| POST | `/resume/pdf/:interviewId` | – | Generate tailored resume – returns `application/pdf` |
+| POST | `/resume/:interviewId` | – | Generate tailored resume – returns `{ html }` for the browser to print to PDF |
 
 ### Interview report shape
 

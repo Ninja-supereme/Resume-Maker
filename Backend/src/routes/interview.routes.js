@@ -10,6 +10,6 @@ interviewRouter.use(authUser)
 interviewRouter.get("/", interviewController.getAllInterviewReportsController)
 interviewRouter.post("/", upload.single("resume"), interviewController.generateInterviewReportController)
 interviewRouter.get("/report/:interviewId", interviewController.getInterviewReportByIdController)
-interviewRouter.post("/resume/pdf/:interviewId", interviewController.generateResumePdfController)
+interviewRouter.post("/resume/:interviewId", interviewController.generateResumeController)
 
 module.exports = interviewRouter

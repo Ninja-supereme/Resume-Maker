@@ -12,6 +12,33 @@ const NAV_ITEMS = [
     { id: 'roadmap', label: 'Road Map', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>) },
 ]
 
+const PRINT_STYLES = `@page { size: A4; margin: 15mm; }
+body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }`
+
+// No allow-scripts: the HTML comes from the AI and must not run code.
+const printHtml = (html, title) => {
+    const iframe = document.createElement("iframe")
+    iframe.setAttribute("sandbox", "allow-same-origin allow-modals")
+    iframe.style.cssText = "position: fixed; width: 0; height: 0; border: 0; visibility: hidden;"
+    iframe.onload = () => {
+        const doc = iframe.contentDocument
+        doc.title = title
+        const style = doc.createElement("style")
+        style.textContent = PRINT_STYLES
+        doc.head.appendChild(style)
+
+        const previousTitle = document.title
+        document.title = title
+        iframe.contentWindow.addEventListener("afterprint", () => {
+            document.title = previousTitle
+            iframe.remove()
+        })
+        iframe.contentWindow.print()
+    }
+    iframe.srcdoc = html
+    document.body.appendChild(iframe)
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 const QuestionCard = ({ item, index }) => {
     const [ open, setOpen ] = useState(false)
@@ -89,13 +116,8 @@ const Interview = () => {
     const downloadResume = async () => {
         setDownloading(true)
         try {
-            const res = await api.post(`/api/interview/resume/pdf/${interviewId}`, null, { responseType: "blob" })
-            const url = URL.createObjectURL(res.data)
-            const link = document.createElement("a")
-            link.href = url
-            link.download = `resume_${interviewId}.pdf`
-            link.click()
-            URL.revokeObjectURL(url)
+            const res = await api.post(`/api/interview/resume/${interviewId}`)
+            printHtml(res.data.html, `Resume - ${result.report.title}`)
         } catch {
             alert("Could not generate the resume. Please try again.")
         } finally {
